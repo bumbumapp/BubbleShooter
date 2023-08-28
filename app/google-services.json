@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "112429197779",
+    "project_id": "bubble-shooter-dab83",
+    "storage_bucket": "bubble-shooter-dab83.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:112429197779:android:fda79898503440caaa2726",
+        "android_client_info": {
+          "package_name": "com.bumbumapps.bubbleshootergame"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "112429197779-o94ecbmfnijc58jdaan326h8218jqkuo.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDFTmpfCGqq8S_WvyIojT9QR4vxR-tVJeQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "112429197779-o94ecbmfnijc58jdaan326h8218jqkuo.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

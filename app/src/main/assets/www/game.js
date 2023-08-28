@@ -2636,12 +2636,7 @@ var GameConfig, console, GameLib, CreateAll, loadRec, GameMenu, GameHelp, GamePl
                 bT.style.display = "";
                 bT.style.zIndex = 1000;
                 ThirdParty.gameOver();
-                setTimeout(function() {
-                    v();
-                    bC();
-                    gradle.orderInit(4)
-                }, 3000);
-                return
+
             } else {
                 if (bR < 10) {
                     GameSound.playSound("STick")
@@ -2743,7 +2738,16 @@ var GameConfig, console, GameLib, CreateAll, loadRec, GameMenu, GameHelp, GamePl
         }
 
         function E() {
-            languageUI.getButton("d_Timeout", 0, 0, 40, 280, 400, 55, 0, 0, false, bT, K, "button", "center", 44)
+        var b = languageUI.getButton("d_PlayAgain", 250, 55, 115, 450, 230, 50, 10, 3, false, bT, K, "button", "center", 22);
+            languageUI.getButton("d_Timeout", 0, 0, 40, 280, 400, 55, 0, 0, false, bT, K, "button", "center", 54)
+             Hammer(b).on("tap", function(b) {
+                                 v();
+                             bC();
+
+                              ThirdParty.restartGame();
+                                        gradle.orderInit(6);
+                                        GameOver.remAll()
+                        });
         }
 
         function z() {
@@ -2752,7 +2756,7 @@ var GameConfig, console, GameLib, CreateAll, loadRec, GameMenu, GameHelp, GamePl
                 bl.style.display = "none";
                 v();
                 bC();
-                gradle.orderInit(4)
+                gradle.orderInit(6)
             });
             bl.next = a;
             a = languageUI.getButton("d_Endgame", 240, 55, 120, 460, 220, 45, 10, 4, true, bl, K, "button", "center", 24);
@@ -3159,7 +3163,7 @@ var GameConfig, console, GameLib, CreateAll, loadRec, GameMenu, GameHelp, GamePl
         a = languageUI.getButton("d_PlayAgain", 250, 55, 115, 450, 230, 50, 10, 3, true, gameContainer, this.data, "button", "center", 22);
         Hammer(a).on("tap", function(a) {
             ThirdParty.restartGame();
-            gradle.orderInit(2);
+            gradle.orderInit(6);
             GameOver.remAll()
         });
         if (c > 0) {

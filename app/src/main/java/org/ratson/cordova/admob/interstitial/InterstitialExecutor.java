@@ -1,9 +1,16 @@
 package org.ratson.cordova.admob.interstitial;
 
+import static org.ratson.cordova.admob.interstitial.Globals.TIMER_FINISHED;
+
 import android.os.Handler;
 import android.util.Log;
 
-import com.google.android.gms.ads.InterstitialAd;
+import androidx.annotation.NonNull;
+
+import com.google.android.gms.ads.FullScreenContentCallback;
+import com.google.android.gms.ads.LoadAdError;
+import com.google.android.gms.ads.interstitial.InterstitialAd;
+import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaInterface;
@@ -14,15 +21,15 @@ import org.ratson.cordova.admob.AbstractExecutor;
 import org.ratson.cordova.admob.AdMob;
 import org.ratson.cordova.admob.AdMobConfig;
 
+import java.util.Timer;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 public class InterstitialExecutor extends AbstractExecutor {
     /**
      * The interstitial ad to display to the user.
      */
-    private InterstitialAd interstitialAd;
+    private InterstitialAd mInterstitialAd;
     final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     public InterstitialExecutor(AdMob plugin) {
         super(plugin);
@@ -46,16 +53,18 @@ public class InterstitialExecutor extends AbstractExecutor {
                 CordovaInterface cordova = plugin.cordova;
 
                 destroy();
-                new Handler().postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        interstitialAd = new InterstitialAd(cordova.getActivity());
-                        interstitialAd.setAdUnitId("ca-app-pub-8444865753152507/4589247003");
-                        interstitialAd.setAdListener(new InterstitialListener(InterstitialExecutor.this));
-                        Log.i("interstitial", config.getInterstitialAdUnitId());
-                        interstitialAd.loadAd(plugin.buildAdRequest());
-                    }
-                }, 180000);
+                        Log.d("INTERSTITUIAL","prepareAd");
+                        InterstitialAd.load(cordova.getActivity(), "", plugin.buildAdRequest(), new InterstitialAdLoadCallback() {
+                            @Override
+                            public void onAdLoaded(@NonNull InterstitialAd interstitialAd) {
+                                mInterstitialAd = interstitialAd;
+                            }
+
+                            @Override
+                            public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
+                                mInterstitialAd = null;
+                            }
+                        });
 
                 delayCallback.success();
             }
@@ -89,13 +98,23 @@ public class InterstitialExecutor extends AbstractExecutor {
 
                 destroy();
 
-                        interstitialAd = new InterstitialAd(cordova.getActivity());
-                        interstitialAd.setAdUnitId(config.getInterstitialAdUnitId());
-                        interstitialAd.setAdListener(new InterstitialListener(InterstitialExecutor.this));
-                        Log.w("interstitial", config.getInterstitialAdUnitId());
-                        interstitialAd.loadAd(plugin.buildAdRequest());
 
-                delayCallback.success();
+                mInterstitialAd.setFullScreenContentCallback(new InterstitialListener(InterstitialExecutor.this));
+                Log.w("interstitial", config.getInterstitialAdUnitId());
+                InterstitialAd.load(cordova.getActivity(), "", plugin.buildAdRequest(), new InterstitialAdLoadCallback() {
+                    @Override
+                    public void onAdLoaded(@NonNull InterstitialAd interstitialAd) {
+                        mInterstitialAd = interstitialAd;
+                    }
+
+                    @Override
+                    public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
+                        mInterstitialAd = null;
+                    }
+                });
+
+
+        delayCallback.success();
             }
         });
         return null;
@@ -103,9 +122,9 @@ public class InterstitialExecutor extends AbstractExecutor {
 
     @Override
     public void destroy() {
-        if (interstitialAd != null) {
-            interstitialAd.setAdListener(null);
-            interstitialAd = null;
+        if (mInterstitialAd != null) {
+            mInterstitialAd.setFullScreenContentCallback(null);
+            mInterstitialAd = null;
         }
     }
 
@@ -114,7 +133,7 @@ public class InterstitialExecutor extends AbstractExecutor {
 
         plugin.config.setInterstitialOptions(options);
 
-        if (interstitialAd == null) {
+        if (mInterstitialAd == null) {
             callbackContext.error("interstitialAd is null, call createInterstitialView first");
             return null;
         }
@@ -123,12 +142,21 @@ public class InterstitialExecutor extends AbstractExecutor {
         cordova.getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                if (interstitialAd == null) {
-                    return;
-                }
-                interstitialAd.loadAd(plugin.buildAdRequest());
+                InterstitialAd.load(cordova.getActivity(), "", plugin.buildAdRequest(), new InterstitialAdLoadCallback() {
+                    @Override
+                    public void onAdLoaded(@NonNull InterstitialAd interstitialAd) {
+                        mInterstitialAd = interstitialAd;
+                    }
 
-                delayCallback.success();
+                    @Override
+                    public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
+                        mInterstitialAd = null;
+                    }
+                });
+
+
+
+        delayCallback.success();
             }
         });
 
@@ -136,7 +164,7 @@ public class InterstitialExecutor extends AbstractExecutor {
     }
 
     public PluginResult showAd(final boolean show, final CallbackContext callbackContext) {
-        if (interstitialAd == null) {
+        if (mInterstitialAd == null) {
             return new PluginResult(PluginResult.Status.ERROR, "interstitialAd is null, call createInterstitialView first.");
         }
         CordovaInterface cordova = plugin.cordova;
@@ -144,13 +172,34 @@ public class InterstitialExecutor extends AbstractExecutor {
         cordova.getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                if (interstitialAd == null) {
+                if (mInterstitialAd == null) {
                     return;
                 }
                 AdMobConfig config = plugin.config;
 
-                if (interstitialAd.isLoaded()) {
-                    interstitialAd.show();
+                if (mInterstitialAd !=null && TIMER_FINISHED) {
+                    mInterstitialAd.show(cordova.getActivity());
+                    mInterstitialAd.setFullScreenContentCallback(new FullScreenContentCallback() {
+                        @Override
+                        public void onAdDismissedFullScreenContent() {
+                            Log.d("INTERSTITUIAL","onAdDismissedFullScreenContent");
+                            Timers.timer().start();
+                            TIMER_FINISHED = false;
+                            InterstitialAd.load(cordova.getActivity(), "", plugin.buildAdRequest(), new InterstitialAdLoadCallback() {
+                                @Override
+                                public void onAdLoaded(@NonNull InterstitialAd interstitialAd) {
+                                    mInterstitialAd = interstitialAd;
+                                    Log.d("INTERSTITUIAL","onAdDismissedFullScreenContent");
+
+                                }
+
+                                @Override
+                                public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
+                                    mInterstitialAd = null;
+                                }
+                            });
+                        }
+                    });
                     if (callbackContext != null) {
                         callbackContext.success();
                     }
@@ -171,7 +220,7 @@ public class InterstitialExecutor extends AbstractExecutor {
         cordova.getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                if (interstitialAd != null && interstitialAd.isLoaded()) {
+                if (mInterstitialAd != null) {
                     callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, true));
                 } else {
                     callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, false));

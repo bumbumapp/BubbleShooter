@@ -23,6 +23,8 @@ import android.os.Bundle;
 import org.apache.cordova.*;
 import android.util.Log;
 import com.google.ads.consent.*;
+import com.google.firebase.crashlytics.FirebaseCrashlytics;
+
 import java.net.MalformedURLException;
 import java.net.URL;
 
@@ -42,6 +44,7 @@ public class MainActivity extends CordovaActivity
 
         loadUrl(launchUrl);
 
+        FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(true);
 
         // Here is GDPR Simple Code
 

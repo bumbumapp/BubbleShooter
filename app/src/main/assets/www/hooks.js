@@ -5,7 +5,7 @@ var gradle = {
 
 	//Ads information :
 	//===================
-    banner         : 'ca-app-pub-8444865753152507/4808738852', //id placement banner
+    banner         : '', //id placement banner
     interstitial   : '', //id placement interstitial
 
     isTesting      : false, //Ads mode testing. set to false for a production mode.
@@ -32,22 +32,25 @@ var gradle = {
                 //gradle.showInter();
                 break;
 			case 'play': //play
-                gradle.checkInterval() && gradle.showInter();
+//                gradle.checkInterval() && gradle.showInter();
                 break;
 			case 'game_over':
-                gradle.showInter();
+//                gradle.showInter();
                 break;
 			case 'level_complete':
-                //gradle.showInter();
+//                gradle.showInter();
+                break;
+			case 'show_ads':
+                gradle.showInter();
                 break;
 			case 'game_pause':
-                gradle.showInter();
+//                gradle.showInter();
                 break;
 			case 'game_over':
                 //gradle.showInter();
                 break;
 			case 'more_games': // <-- End of game
-                gradle.more();
+//                gradle.more();
                 break;
 			case 'test':
 				//gradle.checkInterval() && gradle.showInter();
@@ -169,6 +172,11 @@ var gradle = {
 				//gradle.event('game_over');
 				GameOver.showOver();
 				break;
+			case 6:
+					gradle.event('show_ads');
+    				gamePlay.showPlay();
+    				break;
+
 		}
 	},
 
@@ -288,6 +296,7 @@ var ThirdParty = {
         //GameAnalytics.hit('LevelComplete', level);
          gradle.event('level_complete');
     },
+
 
     // Called when game over
     gameOver: function() {

@@ -2,14 +2,19 @@ package org.ratson.cordova.admob.interstitial;
 
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
+import com.google.android.gms.ads.AdError;
 import com.google.android.gms.ads.AdListener;
+import com.google.android.gms.ads.FullScreenContentCallback;
+import com.google.android.gms.ads.LoadAdError;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import org.ratson.cordova.admob.AbstractExecutor;
 
-class InterstitialListener extends AdListener {
+class InterstitialListener extends FullScreenContentCallback {
     private final InterstitialExecutor executor;
 
     InterstitialListener(InterstitialExecutor executor) {
@@ -17,11 +22,17 @@ class InterstitialListener extends AdListener {
     }
 
     @Override
-    public void onAdFailedToLoad(int errorCode) {
+    public void onAdClicked() {
+        executor.fireAdEvent("admob.interstitial.events.OPEN");
+        executor.fireAdEvent("onPresentInterstitialAd");
+    }
+
+    @Override
+    public void onAdFailedToShowFullScreenContent(@NonNull AdError adError) {
         JSONObject data = new JSONObject();
         try {
-            data.put("error", errorCode);
-            data.put("reason", AbstractExecutor.getErrorReason(errorCode));
+            data.put("error", adError.getCode());
+            data.put("reason", AbstractExecutor.getErrorReason(adError.getCode()));
             data.put("adType", executor.getAdType());
         } catch (JSONException e) {
             e.printStackTrace();
@@ -30,20 +41,23 @@ class InterstitialListener extends AdListener {
         executor.fireAdEvent("onFailedToReceiveAd", data);
     }
 
-    @Override
-    public void onAdLeftApplication() {
-        JSONObject data = new JSONObject();
-        try {
-            data.put("adType", executor.getAdType());
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-        executor.fireAdEvent("admob.interstitial.events.EXIT_APP", data);
-        executor.fireAdEvent("onLeaveToAd", data);
-    }
+
+
+//    @Override
+//    public void onAdLeftApplication() {
+//        JSONObject data = new JSONObject();
+//        try {
+//            data.put("adType", executor.getAdType());
+//        } catch (JSONException e) {
+//            e.printStackTrace();
+//        }
+//        executor.fireAdEvent("admob.interstitial.events.EXIT_APP", data);
+//        executor.fireAdEvent("onLeaveToAd", data);
+//    }
+
 
     @Override
-    public void onAdLoaded() {
+    public void onAdShowedFullScreenContent() {
         Log.w("AdMob", "InterstitialAdLoaded");
         executor.fireAdEvent("admob.interstitial.events.LOAD");
         executor.fireAdEvent("onReceiveInterstitialAd");
@@ -54,15 +68,11 @@ class InterstitialListener extends AdListener {
     }
 
     @Override
-    public void onAdOpened() {
-        executor.fireAdEvent("admob.interstitial.events.OPEN");
-        executor.fireAdEvent("onPresentInterstitialAd");
-    }
-
-    @Override
-    public void onAdClosed() {
+    public void onAdDismissedFullScreenContent() {
         executor.fireAdEvent("admob.interstitial.events.CLOSE");
         executor.fireAdEvent("onDismissInterstitialAd");
         executor.destroy();
     }
+
+
 }
