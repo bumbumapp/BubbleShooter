@@ -1,275 +1,115 @@
 package org.ratson.cordova.admob;
 
-import android.os.Bundle;
-import android.provider.Settings;
-//import android.support.annotation.NonNull;
-import android.util.Log;
+import android.app.Activity;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 
-import com.google.ads.mediation.admob.AdMobAdapter;
-import com.google.android.gms.ads.AdRequest;
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.GoogleApiAvailability;
+import com.company.game.AdsHelper;
+import com.company.game.R;
 
 import org.apache.cordova.CallbackContext;
-import org.apache.cordova.CordovaInterface;
 import org.apache.cordova.CordovaPlugin;
-import org.apache.cordova.CordovaWebView;
-import org.apache.cordova.PluginResult;
-import org.apache.cordova.PluginResult.Status;
 import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-import org.ratson.cordova.admob.interstitial.InterstitialExecutor;
-
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.Iterator;
-
-import org.ratson.cordova.admob.banner.BannerExecutor;
-import org.ratson.cordova.admob.rewardvideo.RewardVideoExecutor;
 
 /**
- * This class represents the native implementation for the AdMob Cordova plugin.
- * This plugin can be used to request AdMob ads natively via the Google AdMob SDK.
- * The Google AdMob SDK is a dependency for this plugin.
+ * Minimal native side of cordova-plugin-admob-free, rewritten for Google Mobile Ads SDK 25 + UMP.
+ * The JS API (admob.banner / admob.interstitial) is unchanged; ad unit IDs come from the build
+ * type resources (Google test IDs in debug builds), not from JavaScript.
  */
 public class AdMob extends CordovaPlugin {
-    /**
-     * Common tag used for logging statements.
-     */
-    private static final String TAG = "AdMob";
-
-    public final AdMobConfig config = new AdMobConfig();
-
-    private BannerExecutor bannerExecutor = null;
-    private InterstitialExecutor interstitialExecutor = null;
-    private RewardVideoExecutor rewardVideoExecutor = null;
-
-    private boolean isGpsAvailable = false;
+    private FrameLayout bannerContainer;
 
     @Override
-    public void initialize(CordovaInterface cordova, CordovaWebView webView) {
-        super.initialize(cordova, webView);
-        isGpsAvailable = (GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(cordova.getActivity()) == ConnectionResult.SUCCESS);
-        Log.w(TAG, String.format("isGooglePlayServicesAvailable: %s", isGpsAvailable ? "true" : "false"));
-    }
-
-    /**
-     * This is the main method for the AdMob plugin.  All API calls go through here.
-     * This method determines the action, and executes the appropriate call.
-     *
-     * @param action          The action that the plugin should execute.
-     * @param inputs          The input parameters for the action.
-     * @param callbackContext The callback context.
-     * @return A PluginResult representing the result of the provided action.  A
-     * status of INVALID_ACTION is returned if the action is not recognized.
-     */
-    @Override
-    public boolean execute(String action, JSONArray inputs, CallbackContext callbackContext) throws JSONException {
-        if (bannerExecutor == null) {
-            bannerExecutor = new BannerExecutor(this);
-        }
-        if (interstitialExecutor == null) {
-            interstitialExecutor = new InterstitialExecutor(this);
-        }
-        if (rewardVideoExecutor == null) {
-            rewardVideoExecutor = new RewardVideoExecutor(this);
-        }
-
-        PluginResult result = null;
-
-        if (Actions.SET_OPTIONS.equals(action)) {
-            JSONObject options = inputs.optJSONObject(0);
-            result = executeSetOptions(options, callbackContext);
-
-        } else if (Actions.CREATE_BANNER.equals(action)) {
-            JSONObject options = inputs.optJSONObject(0);
-            result = bannerExecutor.prepareAd(options, callbackContext);
-
-        } else if (Actions.DESTROY_BANNER.equals(action)) {
-            result = bannerExecutor.removeAd(callbackContext);
-
-        } else if (Actions.REQUEST_AD.equals(action)) {
-            JSONObject options = inputs.optJSONObject(0);
-            result = bannerExecutor.requestAd(options, callbackContext);
-
-        } else if (Actions.SHOW_AD.equals(action)) {
-            boolean show = inputs.optBoolean(0);
-            result = bannerExecutor.showAd(show, callbackContext);
-
-        } else if (Actions.PREPARE_INTERSTITIAL.equals(action)) {
-            JSONObject options = inputs.optJSONObject(0);
-            result = interstitialExecutor.prepareAd(options, callbackContext);
-
-        } else if (Actions.CREATE_INTERSTITIAL.equals(action)) {
-            JSONObject options = inputs.optJSONObject(0);
-            result = interstitialExecutor.createAd(options, callbackContext);
-
-        } else if (Actions.REQUEST_INTERSTITIAL.equals(action)) {
-            JSONObject options = inputs.optJSONObject(0);
-            result = interstitialExecutor.requestAd(options, callbackContext);
-
-        } else if (Actions.SHOW_INTERSTITIAL.equals(action)) {
-            boolean show = inputs.optBoolean(0);
-            result = interstitialExecutor.showAd(show, callbackContext);
-
-        } else if(Actions.IS_INTERSTITIAL_READY.equals(action)) {
-            result = interstitialExecutor.isReady(callbackContext);
-
-        } else if (Actions.CREATE_REWARD_VIDEO.equals(action)) {
-            JSONObject options = inputs.optJSONObject(0);
-            result = rewardVideoExecutor.prepareAd(options, callbackContext);
-
-        } else if (Actions.SHOW_REWARD_VIDEO.equals(action)) {
-            boolean show = inputs.optBoolean(0);
-            result = rewardVideoExecutor.showAd(show, callbackContext);
-
-        } else if(Actions.IS_REWARD_VIDEO_READY.equals(action)) {
-            result = rewardVideoExecutor.isReady(callbackContext);
-
-        } else {
-            Log.d(TAG, String.format("Invalid action passed: %s", action));
-            result = new PluginResult(Status.INVALID_ACTION);
-        }
-
-        if (result != null) {
-            callbackContext.sendPluginResult(result);
-        }
-
-        return true;
-    }
-
-    private PluginResult executeSetOptions(JSONObject options, CallbackContext callbackContext) {
-        Log.w(TAG, "executeSetOptions");
-
-        config.setOptions(options);
-
-        callbackContext.success();
-        return null;
-    }
-
-    public AdRequest buildAdRequest() {
-        AdRequest.Builder builder = new AdRequest.Builder();
-        if (config.isTesting || isRunningInTestLab()) {
-            //builder = builder.addTestDevice(AdRequest.DEVICE_ID_EMULATOR).addTestDevice(getDeviceId());
-        }
-
-        if (config.testDeviceList != null) {
-            Iterator<String> iterator = config.testDeviceList.iterator();
-            while (iterator.hasNext()) {
-                //builder = builder.addTestDevice(iterator.next());
+    public boolean execute(String action, JSONArray args, CallbackContext callbackContext) {
+        final Activity activity = cordova.getActivity();
+        switch (action) {
+            case "setOptions":
+                callbackContext.success();
+                return true;
+            case "createBannerView":
+                activity.runOnUiThread(() -> AdsHelper.gatherConsent(activity, () -> {
+                    ensureBannerContainer(activity);
+                    AdsHelper.loadBanner(activity, bannerContainer, activity.getString(R.string.banner_id));
+                    fire("admob.banner.events.LOAD");
+                }));
+                callbackContext.success();
+                return true;
+            case "showAd": {
+                final boolean show = args.optBoolean(0, true);
+                activity.runOnUiThread(() -> {
+                    if (bannerContainer != null) {
+                        bannerContainer.setVisibility(show ? View.VISIBLE : View.GONE);
+                    }
+                });
+                callbackContext.success();
+                return true;
             }
-        }
-
-        Bundle bundle = new Bundle();
-        bundle.putInt("cordova", 1);
-        if (config.adExtras != null) {
-            Iterator<String> it = config.adExtras.keys();
-            while (it.hasNext()) {
-                String key = it.next();
-                try {
-                    bundle.putString(key, config.adExtras.get(key).toString());
-                } catch (JSONException exception) {
-                    Log.w(TAG, String.format("Caught JSON Exception: %s", exception.getMessage()));
-                }
-            }
-        }
-        builder = builder.addNetworkExtrasBundle(AdMobAdapter.class, bundle);
-
-        if (config.gender != null) {
-            /*
-            if ("male".compareToIgnoreCase(config.gender) != 0) {
-                builder.setGender(AdRequest.GENDER_MALE);
-            } else if ("female".compareToIgnoreCase(config.gender) != 0) {
-                builder.setGender(AdRequest.GENDER_FEMALE);
-            } else {
-                builder.setGender(AdRequest.GENDER_UNKNOWN);
-            }
-            */
-        }
-        if (config.location != null) {
-            builder.setLocation(config.location);
-        }
-        /*if ("yes".equals(config.forFamily)) {
-            builder.setIsDesignedForFamilies(true);
-        } else if ("no".equals(config.forFamily)) {
-            builder.setIsDesignedForFamilies(false);
-        }
-        if ("yes".equals(config.forChild)) {
-            builder.tagForChildDirectedTreatment(true);
-        } else if ("no".equals(config.forChild)) {
-            builder.tagForChildDirectedTreatment(false);
-        }*/
-        if (config.contentURL != null) {
-            builder.setContentUrl(config.contentURL);
-        }
-
-        return builder.build();
-    }
-
-
-    @Override
-    public void onPause(boolean multitasking) {
-        if (bannerExecutor != null) {
-            bannerExecutor.pauseAd();
-        }
-        super.onPause(multitasking);
-    }
-
-    @Override
-    public void onResume(boolean multitasking) {
-        super.onResume(multitasking);
-        isGpsAvailable = (GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(cordova.getActivity()) == ConnectionResult.SUCCESS);
-        if (bannerExecutor != null) {
-            bannerExecutor.resumeAd();
+            case "destroyBannerView":
+                activity.runOnUiThread(() -> {
+                    if (bannerContainer != null) {
+                        bannerContainer.removeAllViews();
+                    }
+                });
+                callbackContext.success();
+                return true;
+            case "createInterstitialView":
+            case "requestInterstitialAd":
+            case "prepareInterstitial":
+                activity.runOnUiThread(() -> AdsHelper.gatherConsent(activity,
+                        () -> AdsHelper.preloadInterstitial(activity, activity.getString(R.string.interstitial_id))));
+                callbackContext.success();
+                return true;
+            case "showInterstitialAd":
+                activity.runOnUiThread(() -> {
+                    boolean shown = AdsHelper.showInterstitialIfReady(activity,
+                            activity.getString(R.string.interstitial_id), () -> fire("admob.interstitial.events.CLOSE"));
+                    if (shown) {
+                        fire("admob.interstitial.events.OPEN");
+                    }
+                });
+                callbackContext.success();
+                return true;
+            case "isInterstitialReady":
+                callbackContext.success(0);
+                return true;
+            case "createRewardVideo":
+            case "showRewardVideo":
+            case "isRewardVideoReady":
+                callbackContext.error("Reward video is not supported");
+                return true;
+            default:
+                return false;
         }
     }
 
-    @Override
-    public void onDestroy() {
-        if (bannerExecutor != null) {
-            bannerExecutor.destroy();
-            bannerExecutor = null;
+    /** Puts the WebView and a bottom banner slot into a vertical layout, so the banner never covers the game. */
+    private void ensureBannerContainer(Activity activity) {
+        if (bannerContainer != null) {
+            return;
         }
-        if (interstitialExecutor != null) {
-            interstitialExecutor.destroy();
-            interstitialExecutor = null;
+        View web = webView.getView();
+        ViewGroup parent = (ViewGroup) web.getParent();
+        bannerContainer = new FrameLayout(activity);
+        if (parent == null) {
+            return;
         }
-        if (rewardVideoExecutor != null) {
-            rewardVideoExecutor.destroy();
-            rewardVideoExecutor = null;
-        }
-        super.onDestroy();
+        int index = parent.indexOfChild(web);
+        ViewGroup.LayoutParams lp = web.getLayoutParams();
+        parent.removeView(web);
+        LinearLayout column = new LinearLayout(activity);
+        column.setOrientation(LinearLayout.VERTICAL);
+        column.addView(web, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+        column.addView(bannerContainer, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
+        parent.addView(column, index, lp != null ? lp : new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        web.requestFocus();
     }
 
-    //@NonNull
-    private String getDeviceId() {
-        // This will request test ads on the emulator and deviceby passing this hashed device ID.
-        String ANDROID_ID = Settings.Secure.getString(cordova.getActivity().getContentResolver(), Settings.Secure.ANDROID_ID);
-        return md5(ANDROID_ID).toUpperCase();
-    }
-
-    private boolean isRunningInTestLab() {
-        String testLabSetting = Settings.System.getString(cordova.getActivity().getContentResolver(), "firebase.test.lab");
-        return "true".equals(testLabSetting);
-    }
-
-    private static String md5(final String s) {
-        try {
-            MessageDigest digest = java.security.MessageDigest.getInstance("MD5");
-            digest.update(s.getBytes());
-            byte messageDigest[] = digest.digest();
-            StringBuffer hexString = new StringBuffer();
-            for (int i = 0; i < messageDigest.length; i++) {
-                String h = Integer.toHexString(0xFF & messageDigest[i]);
-                while (h.length() < 2)
-                    h = "0" + h;
-                hexString.append(h);
-            }
-            return hexString.toString();
-
-        } catch (NoSuchAlgorithmException e) {
-        }
-        return "";
+    private void fire(String event) {
+        cordova.getActivity().runOnUiThread(() ->
+                webView.loadUrl("javascript:cordova.fireDocumentEvent('" + event + "');"));
     }
 }
